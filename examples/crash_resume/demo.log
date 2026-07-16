@@ -1,0 +1,6 @@
+=== RUN 1: worker crashes mid-run ===
+crashed: simulated crash (worker killed)
+checkpoint after crash: 1 section(s) persisted atomically (last_step=1)
+=== RUN 2: restart -> resume from checkpoint ===
+result: 4 sections total, RESUMED 1, regenerated 3
+OK: crashed sections never regenerated twice; document completed after restart
