@@ -1,5 +1,6 @@
 # llm-longdoc-pipeline
 
+[![CI](https://github.com/Zaki-kek/llm-longdoc-pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/Zaki-kek/llm-longdoc-pipeline/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
