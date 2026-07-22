@@ -17,7 +17,7 @@ from __future__ import annotations
 import os
 import time
 from dataclasses import dataclass, field
-from typing import Protocol, Sequence, runtime_checkable
+from typing import Any, Protocol, Sequence, runtime_checkable
 
 
 @dataclass(frozen=True)
@@ -78,7 +78,7 @@ class HTTPChatClient:
         if not api_key:
             raise LLMError(f"{self.name}: env var {self.api_key_env} is not set")
 
-        payload = {
+        payload: dict[str, Any] = {
             "model": self.model,
             "messages": [{"role": m.role, "content": m.content} for m in messages],
         }
