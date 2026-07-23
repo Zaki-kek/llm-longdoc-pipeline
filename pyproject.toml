@@ -10,7 +10,10 @@ dependencies = ["requests>=2.28"]
 [project.optional-dependencies]
 docx = ["python-docx>=1.1"]
 yaml = ["pyyaml>=6.0"]
-dev = ["pytest>=8.0", "ruff>=0.5", "mypy>=1.8"]
+# Линтер/тайпчекер запинены точно: незапиненный ruff в CI подтянул 0.16.0 и
+# ввёл новые правила (RUF022/BLE001/PIE810), краснящие зелёный локально прогон.
+# Пин = воспроизводимый CI, совпадающий с локально проверенным состоянием.
+dev = ["pytest>=8.0", "ruff==0.15.22", "mypy==2.3.0"]
 
 [project.scripts]
 llm-longdoc = "pipeline.__main__:main"
