@@ -17,10 +17,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from time import perf_counter
 
 from pipeline import checkpoints
+from pipeline._logging import get_pipeline_logger, new_run_id
+from pipeline.chunking import pack_context
 from pipeline.context_tracker import ContextTracker
 from pipeline.llm_client import LLMClient, client_from_env
+from pipeline.metrics import Metrics
 from pipeline.prompt_assembler import Brief, section_messages
 from pipeline.quality_gate import QualityGate
 from pipeline.readability_editor import polish
@@ -32,6 +36,7 @@ class Result:
     docx_path: Path | None
     sections: int
     resumed: int
+    metrics: dict | None = None
 
 
 def generate(
@@ -39,13 +44,20 @@ def generate(
     job_dir: Path,
     llm: LLMClient | None = None,
     make_docx: bool = True,
+    run_id: str | None = None,
+    metrics: Metrics | None = None,
+    context_budget: int | None = None,
 ) -> Result:
     """Generate a document from a brief into ``job_dir``, resumable on crash."""
     job_dir = Path(job_dir)
     job_dir.mkdir(parents=True, exist_ok=True)
     llm = llm or client_from_env()
     brief = Brief.from_dict(brief_dict)
-    gate = QualityGate(llm)
+    run_id = run_id or new_run_id()
+    metrics = metrics if metrics is not None else Metrics()
+    log = get_pipeline_logger(run_id=run_id, stage="generate")
+    provider = getattr(llm, "name", "?")
+    gate = QualityGate(llm, metrics=metrics)
 
     state = checkpoints.read_state(job_dir)
     done: list[dict] = list(state.get("sections", []))
@@ -55,11 +67,19 @@ def generate(
     tracker = ContextTracker()
     tracker.restore(done)
 
+    log.info(
+        f"generate.start topic={brief.topic!r} sections={len(brief.sections)} "
+        f"provider={provider} resumed={resumed}"
+    )
+
     for section in brief.sections:
         if section in done_names:  # (1) idempotent resume
             continue
 
+        t0 = perf_counter()
         prior = tracker.prior_context()
+        if context_budget is not None:
+            prior = pack_context(prior.split("\n"), context_budget)
         draft = llm.complete(section_messages(brief, section, prior))
 
         def revise(feedback: str, _section=section, _prior=prior) -> str:
@@ -74,6 +94,11 @@ def generate(
         checkpoints.write_state_patch(
             job_dir, {"sections": done, "last_step": len(done)}
         )  # atomic checkpoint after each section
+        dt = perf_counter() - t0
+        metrics.observe("section.duration_seconds", dt)
+        log.info(
+            f"section.done section={section!r} provider={provider} seconds={dt:.4f}"
+        )
 
     markdown = f"# {brief.topic}\n\n" + "\n\n".join(
         f"## {s['section']}\n\n{s['text']}" for s in done
@@ -92,9 +117,12 @@ def generate(
         except ImportError:
             docx_path = None  # python-docx not installed; markdown is still produced
 
+    log.info(f"generate.done sections={len(done)} resumed={resumed} provider={provider}")
+
     return Result(
         markdown_path=md_path,
         docx_path=docx_path,
         sections=len(done),
         resumed=resumed,
+        metrics=metrics.snapshot(),
     )

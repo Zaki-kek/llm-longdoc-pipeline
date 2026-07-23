@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from typing import Callable
 
 from pipeline.llm_client import LLMClient, Message
+from pipeline.metrics import Metrics
 
 Verdict = str  # "READY" | "NEEDS_FIXES"
 
@@ -55,6 +56,7 @@ class QualityGate:
 
     llm: LLMClient
     max_revisions: int = 2
+    metrics: Metrics | None = None
 
     def judge(self, section: str, text: str, brief_topic: str) -> JudgeResult:
         reply = self.llm.complete(_judge_messages(section, text, brief_topic))
@@ -78,5 +80,7 @@ class QualityGate:
             result = self.judge(section, draft, brief_topic)
             if result.ready:
                 return draft
+            if self.metrics is not None:
+                self.metrics.inc("gate.revisions")
             draft = revise(result.reasons)
         return draft

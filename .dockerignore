@@ -1,0 +1,21 @@
+# Mirror .gitignore plus build/test/output noise so the image stays small
+# and no local secrets or caches leak into the build context.
+.git
+.github
+.venv
+venv
+__pycache__
+*.pyc
+*.egg-info
+.mypy_cache
+.ruff_cache
+.pytest_cache
+dist
+build
+.env
+.env.*
+# runtime artifacts / local outputs
+out/
+jobs/
+tests
+examples/*/output

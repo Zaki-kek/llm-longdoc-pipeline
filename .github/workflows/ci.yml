@@ -22,6 +22,8 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+          cache-dependency-path: 'pyproject.toml'
 
       - name: Install dependencies
         run: |
@@ -36,3 +38,53 @@ jobs:
 
       - name: Pytest
         run: python -m pytest -q
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: 'pip'
+          cache-dependency-path: 'pyproject.toml'
+
+      - name: Build wheel
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build
+
+      - name: Install wheel and import
+        run: |
+          python -m pip install dist/*.whl
+          python -c "import pipeline; assert hasattr(pipeline, 'run')"
+
+  guard:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deanonymisation guard
+        # Fail if a real-identity / brand string appears in tracked files.
+        # --exclude-dir='.github' keeps this pattern from matching itself.
+        run: |
+          ! grep -RIEi 'catslide|zakrii|realtor|real-name-token' \
+            --include='*.py' --include='*.md' --include='*.yml' --include='*.toml' \
+            --exclude-dir='.github' .
+
+  docker:
+    needs: test
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Docker build (advisory, non-blocking)
+        run: docker build -t llm-longdoc-test .

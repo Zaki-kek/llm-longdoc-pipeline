@@ -78,6 +78,16 @@ mypy pipeline
 pytest -q            # 22 tests: concurrency, crash-recovery, idempotency, judge, citation
 ```
 
+## Deployment
+
+Running locally and in a container, the provider env schema, auto-resume and
+the `run()` facade are covered in [`docs/deploy.md`](docs/deploy.md).
+
+## Security
+
+Threat model, secrets hygiene and the anti-SSRF guard (with the
+`ALLOW_PRIVATE_LLM_URL` opt-in) are documented in [SECURITY.md](SECURITY.md).
+
 ## License
 
 MIT - see [LICENSE](LICENSE).

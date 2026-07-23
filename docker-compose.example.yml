@@ -1,0 +1,15 @@
+# Example Compose file for running the pipeline as a batch job.
+# Copy to docker-compose.yml and adjust. Secrets come from .env (git-ignored).
+services:
+  pipeline:
+    build: .
+    # Provider keys / config live in a local .env (see .env.example).
+    env_file:
+      - .env
+    # Persist checkpoints and outputs on the host so auto-resume survives
+    # a container restart.
+    volumes:
+      - ./jobs:/app/jobs
+    # One-shot run against the bundled example brief on the mock backend
+    # (leave LLM_PROVIDERS unset in .env to stay offline).
+    command: ["examples/report_from_brief/brief.yaml", "--out", "/app/jobs/report"]

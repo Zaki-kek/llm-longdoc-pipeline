@@ -11,6 +11,7 @@ Usage:
 """
 import json
 import logging
+import uuid
 from typing import Any, MutableMapping
 
 
@@ -23,11 +24,17 @@ class PipelineLoggerAdapter(logging.LoggerAdapter):
         return json.dumps(payload, ensure_ascii=False), kwargs
 
 
+def new_run_id() -> str:
+    """Return a short, unique run identifier for correlating log records."""
+    return uuid.uuid4().hex[:8]
+
+
 def get_pipeline_logger(
     job_id: int | str | None = None,
     stage: str | None = None,
     substep: str | None = None,
     session_id: str | None = None,
+    run_id: str | None = None,
     logger_name: str = "pipeline",
 ) -> PipelineLoggerAdapter:
     """Return a logger carrying structured context. All fields are optional."""
@@ -41,4 +48,6 @@ def get_pipeline_logger(
         context["substep"] = substep
     if session_id:
         context["session_id"] = session_id
+    if run_id:
+        context["run_id"] = run_id
     return PipelineLoggerAdapter(base, context)
